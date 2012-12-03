@@ -19,12 +19,11 @@ class Control {
 		int iWidth;
 		int iHeight;
 		bool running;
-		float fRotationAngle;
+		GLuint iProjLoc, iViewModelLoc;
+		glm::mat4 mProj, mViewModel;
+		GLuint programID;
 		GLuint uiVAO[2];
 		GLuint uiVBO[4];
-		GLuint projMatrixLoc, viewMatrixLoc;
-		glm::mat4 projMatrix, viewMatrix;
-		GLuint programID;
 
 	public:
 		Control();
@@ -74,7 +73,7 @@ void Control::deinitialize() {
 void Control::prepare() {
 	//GLuint uiVAO[2];
 	//GLuint uiVBO[4];
-	fRotationAngle = 0.0f;
+	running = true;
 
 	float fTriangle[] = {
 		-0.4f, 0.1f, -1.0f,
@@ -121,7 +120,6 @@ void Control::prepare() {
 
 	// Line
 	
-
 	glBindVertexArray(uiVAO[1]);
 	
 	glBindBuffer(GL_ARRAY_BUFFER, uiVBO[2]);
@@ -136,20 +134,22 @@ void Control::prepare() {
 
 
 
-//	GLuint programID = LoadShaders("shader.vert", "shader.frag");
 	programID = LoadShaders("shader.vert", "shader.frag");
 
 	
-	//GLuint projMatrixLoc, viewMatrixLoc;
-	//glm::mat4 projMatrix, viewMatrix;
-
-	projMatrixLoc = glGetUniformLocation(programID, "projectionMatrix");
-	viewMatrixLoc = glGetUniformLocation(programID, "viewMatrix");
+	iProjLoc = glGetUniformLocation(programID, "projectionMatrix");
+	iViewModelLoc = glGetUniformLocation(programID, "viewMatrix");
 
 }
 
 void Control::run() {
-	running = true;
+	render();
+}
+
+void Control::render() {
+
+	float up = 0.0f;
+	float rotation = 0.0f;
 
 	while(running) {
 		SDL_Event event;
@@ -162,51 +162,49 @@ void Control::run() {
 					if(event.key.keysym.sym == SDLK_ESCAPE) {
 						running = false;
 					} else if(event.key.keysym.sym == SDLK_LEFT) {
-						fRotationAngle -= 5.0f;
+						rotation -= 5.0f;
 					} else if(event.key.keysym.sym == SDLK_RIGHT) {
-						fRotationAngle += 5.0f;
+						rotation += 5.0f;
+					} else if(event.key.keysym.sym == SDLK_UP) {
+						up += 0.15f;
+					} else if(event.key.keysym.sym == SDLK_DOWN) {
+						up -= 0.15f;
 					}
 					break;
 			}
 		}
-		
-		render();
-	}
 
-}
-
-void Control::render() {
-		
-
-		viewMatrix = glm::lookAt(glm::vec3(-1.0f, 1.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		projMatrix = glm::perspective(45.0f, (float) iWidth / (float) iHeight, 0.1f, 100.0f);
+		mViewModel = glm::lookAt(glm::vec3(-1.0f, 1.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		mProj = glm::perspective(45.0f, (float) iWidth / (float) iHeight, 0.1f, 100.0f);
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 
 		glUseProgram(programID);
 
-		glUniformMatrix4fv(projMatrixLoc, 1, GL_FALSE, glm::value_ptr(projMatrix));
-		glUniformMatrix4fv(viewMatrixLoc, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+		glUniformMatrix4fv(iProjLoc, 1, GL_FALSE, glm::value_ptr(mProj));
+		glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mViewModel));
 
 
 		glm::mat4 mCurrent;
 
-		//viewMatrix = glm::mat4(1.0);
 
 		// Triangles
 		glBindVertexArray(uiVAO[0]);
 
 
-		mCurrent = glm::rotate(viewMatrix, fRotationAngle, glm::vec3(0.0f, 1.0f, 0.0f));
-		//mCurrent = glm::translate(viewMatrix, glm::vec3(0.0f, -1.0f, 0.0f));
-		//mCurrent = glm::rotate(mCurrent, fRotationAngle, glm::vec3(0.0f, 1.0f, 0.0f));
-		//mCurrent = glm::translate(mCurrent, glm::vec3(0.0f, 0.0f, 1.0f));
-    glUniformMatrix4fv(viewMatrixLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+		mCurrent = glm::rotate(mViewModel, rotation, glm::vec3(0.0f, 1.0f, 0.0f));
+		mCurrent = glm::scale(mCurrent, glm::vec3(0.2f, 0.2f, 0.2f));
+		mCurrent = glm::translate(mCurrent, glm::vec3(0.0f, up, 0.0f));
 
+		for(int i = 0; i < 25; i++) {
+			mCurrent = glm::translate(mCurrent, glm::vec3(1.1f, 0.0f, 0.0f));
+			glm::mat4 temp = glm::rotate(mCurrent, rotation * i, glm::vec3(1.0f, 0.0f, 0.0f));
+	    glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(temp)); 
+			glDrawArrays(GL_TRIANGLES, 0, 3);
+		}
 		
-		mCurrent = glm::translate(viewMatrix, glm::vec3(0.0f, -1.0f, 0.0f));
-    glUniformMatrix4fv(viewMatrixLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
+		mCurrent = glm::translate(mViewModel, glm::vec3(0.0f, -1.0f, 0.0f));
+    glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 		
 
@@ -214,19 +212,19 @@ void Control::render() {
 		
 		glBindVertexArray(uiVAO[1]);
 		
-		mCurrent = viewMatrix;
+		mCurrent = mViewModel;
 
-    glUniformMatrix4fv(viewMatrixLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
+    glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
 		glDrawArrays(GL_LINES, 0, 2);
 
-    glUniformMatrix4fv(viewMatrixLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
+    glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
 		glDrawArrays(GL_LINES, 2, 2);
 
-    glUniformMatrix4fv(viewMatrixLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
+    glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
 		glDrawArrays(GL_LINES, 4, 2);
 		
 		SDL_GL_SwapBuffers();
-
+	}
 }
 
 void Control::setWidth(int w) {
