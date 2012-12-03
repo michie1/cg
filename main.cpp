@@ -13,36 +13,68 @@
 #include "shader.h"
 
 
-int main(int argc, char** argv)
-{
-	int width = 500;
-	int height = 500;
-	bool running = true;	
-	float fRotationAngle = 0.0f;
-	
+class Control {
+	private:
+		void handleEvents();
+		int iWidth;
+		int iHeight;
+		bool running;
+		float fRotationAngle;
+		GLuint uiVAO[2];
+		GLuint uiVBO[4];
+		GLuint projMatrixLoc, viewMatrixLoc;
+		glm::mat4 projMatrix, viewMatrix;
+		GLuint programID;
+
+	public:
+		Control();
+		void initialize();
+		void deinitialize();
+		void prepare();
+		void run();
+		void render();
+		void setWidth(int w);
+		void setHeight(int h);
+};
+
+// Public
+
+Control::Control() {
+
+}
+
+void Control::initialize() {
+	// SDL
 	SDL_Init(SDL_INIT_EVERYTHING); 
-	SDL_SetVideoMode(width, height, 32, SDL_OPENGL | SDL_GL_DOUBLEBUFFER);
+	SDL_SetVideoMode(iWidth, iHeight, 32, SDL_OPENGL | SDL_GL_DOUBLEBUFFER);
 	SDL_EnableKeyRepeat(10, 10);
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
-	SDL_WM_SetCaption("Computer Graphics Final Project 2012", NULL);
+	SDL_WM_SetCaption("Computer Graphics Final Project 2012", NULL);		
 
+	// GLEW
 	glewInit();
 
-	glViewport(0, 0, width, height);
+	// GL
+	glViewport(0, 0, iWidth, iHeight);
 	glClearColor(0.0f, 0.5f, 1.0f, 1.0f); 
-
 	glEnable(GL_DEPTH_TEST);
 	//glEnable(GL_CULL_FACE);
 	glDepthMask(GL_TRUE);
 	glClearDepth(1.0f);
+}
 
-	// Settings
-		
-	glm::mat4 ViewMatrix;
-	glm::mat4 ProjectionMatrix;
+void Control::deinitialize() {
+	
+	glDeleteBuffers(4, uiVBO);
+	glDeleteVertexArrays(2, uiVAO);
 
-	GLuint uiVAO[2];
-	GLuint uiVBO[4];
+	SDL_Quit();
+}
+
+void Control::prepare() {
+	//GLuint uiVAO[2];
+	//GLuint uiVBO[4];
+	fRotationAngle = 0.0f;
 
 	float fTriangle[] = {
 		-0.4f, 0.1f, -1.0f,
@@ -88,6 +120,8 @@ int main(int argc, char** argv)
 
 
 	// Line
+	
+
 	glBindVertexArray(uiVAO[1]);
 	
 	glBindBuffer(GL_ARRAY_BUFFER, uiVBO[2]);
@@ -101,16 +135,22 @@ int main(int argc, char** argv)
  	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
 
-	GLuint programID = LoadShaders("shader.vert", "shader.frag");
+
+//	GLuint programID = LoadShaders("shader.vert", "shader.frag");
+	programID = LoadShaders("shader.vert", "shader.frag");
 
 	
-	GLuint projMatrixLoc, viewMatrixLoc;
-	glm::mat4 projMatrix, viewMatrix;
+	//GLuint projMatrixLoc, viewMatrixLoc;
+	//glm::mat4 projMatrix, viewMatrix;
 
 	projMatrixLoc = glGetUniformLocation(programID, "projectionMatrix");
 	viewMatrixLoc = glGetUniformLocation(programID, "viewMatrix");
-	
-	
+
+}
+
+void Control::run() {
+	running = true;
+
 	while(running) {
 		SDL_Event event;
 		while(SDL_PollEvent(&event)) {
@@ -130,10 +170,16 @@ int main(int argc, char** argv)
 			}
 		}
 		
-		// Render
-	
-		projMatrix = glm::perspective(45.0f, (float) width / (float) height, 0.1f, 100.0f);
+		render();
+	}
+
+}
+
+void Control::render() {
+		
+
 		viewMatrix = glm::lookAt(glm::vec3(-1.0f, 1.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		projMatrix = glm::perspective(45.0f, (float) iWidth / (float) iHeight, 0.1f, 100.0f);
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 
@@ -159,12 +205,13 @@ int main(int argc, char** argv)
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 
 		
-		//mCurrent = glm::translate(viewMatrix, glm::vec3(0.0f, -1.0f, 0.0f));
-    //glUniformMatrix4fv(viewMatrixLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
-		//glDrawArrays(GL_TRIANGLES, 0, 3);
+		mCurrent = glm::translate(viewMatrix, glm::vec3(0.0f, -1.0f, 0.0f));
+    glUniformMatrix4fv(viewMatrixLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
+		glDrawArrays(GL_TRIANGLES, 0, 3);
 		
 
 		// Lines
+		
 		glBindVertexArray(uiVAO[1]);
 		
 		mCurrent = viewMatrix;
@@ -180,15 +227,34 @@ int main(int argc, char** argv)
 		
 		SDL_GL_SwapBuffers();
 
-		//fRotationAngle += 5.0f;
+}
 
-	}
+void Control::setWidth(int w) {
+	iWidth = w;
+}
 
+void Control::setHeight(int h) {
+	iHeight = h;
+}
 
-	glDeleteBuffers(4, uiVBO);
-	glDeleteVertexArrays(2, uiVAO);
+// Private
 
-	SDL_Quit();
+void Control::handleEvents() {
+
+}
+
+int main(int argc, char** argv)
+{
+	Control c;
+	c.setWidth(500);
+	c.setHeight(500);
+	c.initialize();
+
+	c.prepare();
+	c.run();
+
+	c.deinitialize();
+
 	return 0;
 }
 
