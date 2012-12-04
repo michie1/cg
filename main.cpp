@@ -12,6 +12,19 @@
 
 #include "shader.h"
 
+struct particle {
+	glm::vec3 location;
+	
+};
+
+class Firework {
+	private:
+		particle particles[1];
+
+	public:
+		Firework();
+};
+
 
 class Control {
 	private:
@@ -24,6 +37,9 @@ class Control {
 		GLuint programID;
 		GLuint uiVAO[2];
 		GLuint uiVBO[4];
+		GLuint dataBufferID;
+		GLint vertexLoc;
+		GLint colorLoc;
 
 	public:
 		Control();
@@ -101,8 +117,14 @@ void Control::prepare() {
  		0.0f, 0.0f, 1.0f,
 		0.0f, 0.0f, 1.0f	};
 
-	glGenVertexArrays(1, uiVAO);
-	glGenBuffers(4, uiVBO); 
+	float fTest[] = {
+		0.0f, 0.0f, 0.0f,
+		2.0f, 2.0f, 0.0f,
+		0.0f, 0.0f, 0.0f,
+		2.0f, 2.0f, 0.0f };
+
+	glGenVertexArrays(3, uiVAO);
+	glGenBuffers(7, uiVBO); 
 
 	// Triangle
 	glBindVertexArray(uiVAO[0]);
@@ -132,11 +154,27 @@ void Control::prepare() {
 	glEnableVertexAttribArray(1);
  	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
+	// Test
+	
+	//glBindBuffer(GL_ARRAY_BUFFER, uiVBO[4]);
+	//glBufferData(GL_ARRAY_BUFFER, sizeof(fTest), fTest, GL_STATIC_DRAW); 
+//	glEnableVertexAttribArray(0);
+// 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+//
 
+
+  glGenBuffers(1, &dataBufferID);
+  glBindBuffer(GL_ARRAY_BUFFER, dataBufferID);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(fTest), fTest, GL_STATIC_DRAW);
+	glFinish();
 
 	programID = LoadShaders("shader.vert", "shader.frag");
 
-	
+	glUseProgram(programID);
+	vertexLoc = glGetAttribLocation(programID, "inPosition");
+	colorLoc = glGetAttribLocation(programID, "inColor");
+	//glUseProgram(0);
+
 	iProjLoc = glGetUniformLocation(programID, "projectionMatrix");
 	iViewModelLoc = glGetUniformLocation(programID, "viewMatrix");
 
@@ -179,7 +217,6 @@ void Control::render() {
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 
-		glUseProgram(programID);
 
 		glUniformMatrix4fv(iProjLoc, 1, GL_FALSE, glm::value_ptr(mProj));
 		glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mViewModel));
@@ -206,7 +243,6 @@ void Control::render() {
 		mCurrent = glm::translate(mViewModel, glm::vec3(0.0f, -1.0f, 0.0f));
     glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
 		glDrawArrays(GL_TRIANGLES, 0, 3);
-		
 
 		// Lines
 		
@@ -220,8 +256,22 @@ void Control::render() {
     glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
 		glDrawArrays(GL_LINES, 2, 2);
 
-    glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
+	  glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
 		glDrawArrays(GL_LINES, 4, 2);
+
+
+		// Test
+
+		glUseProgram(programID);
+		glBindVertexArray(uiVAO[2]);
+
+	  //glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
+		glBindBuffer(GL_ARRAY_BUFFER, dataBufferID);
+		//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6*sizeof(GLfloat), 0);
+		//glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6*sizeof(GLfloat), 0);
+    glEnableVertexAttribArray(0);
+    //glEnableVertexAttribArray(1);
+		//glDrawArrays(GL_LINES, 0, 2);
 		
 		SDL_GL_SwapBuffers();
 	}
