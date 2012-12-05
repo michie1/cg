@@ -34,7 +34,7 @@ class Control {
 		int iWidth;
 		int iHeight;
 		bool running;
-		GLuint iProjLoc, iViewModelLoc;
+		GLuint iProjLoc, iViewModelLoc, iColorLoc;
 		glm::mat4 mProj, mViewModel;
 		GLuint programID;
 		GLuint uiVAO[2];
@@ -42,6 +42,8 @@ class Control {
 		GLuint dataBufferID;
 		GLint vertexLoc;
 		GLint colorLoc;
+		float color[3];
+
 
 	public:
 		Control();
@@ -58,6 +60,10 @@ class Control {
 
 Control::Control() {
 
+}
+
+float fRand() {
+	return (float) rand() / RAND_MAX;
 }
 
 void Control::initialize() {
@@ -92,17 +98,15 @@ void Control::prepare() {
 	//GLuint uiVAO[2];
 	//GLuint uiVBO[4];
 	running = true;
+	color[0] = fRand();
+	color[1] = fRand();
+	color[2] = fRand();
 
 	float fTriangle[] = {
 		-0.4f, 0.1f, -1.0f,
 		0.4f, 0.1f, -1.0f,
 		0.0f, 0.7f, -1.0f };
 	
-	float fTriangleColor[] = {
-		1.0f, 0, 0,
-		0, 1.0f, 0,
-		0, 0, 1.0f };
-
 	float fLine[] = {
 		-1.0f, 0.0f, 0.0f,
 		1.0f, 0.0f, 0.0f,
@@ -111,19 +115,6 @@ void Control::prepare() {
 		0.0f, 0.0f, -1.0f,
 		0.0f, 0.0f, 1.0f };
 
-	float fLineColor[] = {
-		1.0f, 0.0f, 0.0f,
-		1.0f, 0.0f, 0.0f,
-		0.0f, 1.0f, 0.0f,
-		0.0f, 1.0f, 1.0f,
- 		0.0f, 0.0f, 1.0f,
-		0.0f, 0.0f, 1.0f	};
-
-	float fTest[] = {
-		0.0f, 0.0f, 0.0f,
-		2.0f, 2.0f, 0.0f,
-		0.0f, 0.0f, 0.0f,
-		2.0f, 2.0f, 0.0f };
 
 	glGenVertexArrays(3, uiVAO);
 	glGenBuffers(7, uiVBO); 
@@ -136,11 +127,6 @@ void Control::prepare() {
 	glEnableVertexAttribArray(0);
  	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	
-	glBindBuffer(GL_ARRAY_BUFFER, uiVBO[1]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(fTriangleColor), fTriangleColor, GL_STATIC_DRAW); 
-	glEnableVertexAttribArray(1);
- 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
 
 	// Line
 	
@@ -151,24 +137,6 @@ void Control::prepare() {
 	glEnableVertexAttribArray(0);
  	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
-	glBindBuffer(GL_ARRAY_BUFFER, uiVBO[3]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(fLineColor), fLineColor, GL_STATIC_DRAW); 
-	glEnableVertexAttribArray(1);
- 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-	// Test
-	
-	//glBindBuffer(GL_ARRAY_BUFFER, uiVBO[4]);
-	//glBufferData(GL_ARRAY_BUFFER, sizeof(fTest), fTest, GL_STATIC_DRAW); 
-//	glEnableVertexAttribArray(0);
-// 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-//
-
-
-  glGenBuffers(1, &dataBufferID);
-  glBindBuffer(GL_ARRAY_BUFFER, dataBufferID);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(fTest), fTest, GL_STATIC_DRAW);
-	glFinish();
 
 	programID = LoadShaders("shader.vert", "shader.frag");
 
@@ -179,6 +147,7 @@ void Control::prepare() {
 
 	iProjLoc = glGetUniformLocation(programID, "projectionMatrix");
 	iViewModelLoc = glGetUniformLocation(programID, "viewMatrix");
+	iColorLoc = glGetUniformLocation(programID, "color");
 
 }
 
@@ -220,6 +189,7 @@ void Control::render() {
 			hi[i] = 0.0f;
 		}
 	}
+		
 
 	while(running) {
 		SDL_Event event;
@@ -279,6 +249,7 @@ void Control::render() {
 		mCurrent = glm::scale(mCurrent, glm::vec3(0.2f, 0.2f, 0.2f));
 		mCurrent = glm::translate(mCurrent, glm::vec3(0.0f, up, 0.0f));
 
+
 		for(int i = 0; i < 500; i++) {
 			mCurrent = glm::translate(mCurrent, glm::vec3(0.2f, 0.0f, 0.0f));
 			if(i % 2 == 0) {
@@ -288,6 +259,7 @@ void Control::render() {
 				temp = mCurrent;
 			}
 			temp = glm::rotate(temp, rotation * i, glm::vec3(1.0f, 0.0f, 0.0f));
+			glUniform3f(iColorLoc, color[0], color[1], color[2] );
 	    glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(temp)); 
 			glDrawArrays(GL_TRIANGLES, 0, 3);
 		}
@@ -298,6 +270,7 @@ void Control::render() {
 		mCurrent = glm::translate(mViewModel, glm::vec3(0.0f, -1.0f, 0.0f));
 		mCurrent = glm::translate(mViewModel, glm::vec3( (float)(rand() % 5) / 100.0f, (float)(rand() % 5) / 200.0f -1.0f, 0.0f));
     glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
+		glUniform3f(iColorLoc, 1.0f, 0.0f, 0.0f);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 
 		// upmoving triangles
@@ -320,6 +293,7 @@ void Control::render() {
 			} else {
 				y[i] += 0.05f;
 			}
+			glUniform3f(iColorLoc, 0.0f, 0.0f, 1.0f);
     	glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(temp)); 
 			glDrawArrays(GL_TRIANGLES, 0, 3);
 		}
@@ -359,6 +333,7 @@ void Control::render() {
 						}
 					}
 
+					glUniform3f(iColorLoc, 1.0f, 1.0f, 0.0f);
 					glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(temp)); 
 					glDrawArrays(GL_TRIANGLES, 0, 3);
 				}
@@ -378,6 +353,7 @@ void Control::render() {
 				circley[i] += sin(i) * 0.02f * speed;
 				temp = glm::translate(temp, glm::vec3( circlex[i], circley[i], 0.0f));
 	
+				glUniform3f(iColorLoc, 0.0f, 1.0f, 1.0f);
 		  	glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(temp)); 
 				glDrawArrays(GL_TRIANGLES, 0, 3);
 	
@@ -392,12 +368,15 @@ void Control::render() {
 		
 		mCurrent = mViewModel;
 
+		glUniform3f(iColorLoc, 1.0f, 0.0f, 0.0f);
     glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
 		glDrawArrays(GL_LINES, 0, 2);
-
+		
+		glUniform3f(iColorLoc, 0.0f, 1.0f, 0.0f);
     glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
 		glDrawArrays(GL_LINES, 2, 2);
 
+		glUniform3f(iColorLoc, 0.0f, 0.0f, 1.0f);
 	  glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
 		glDrawArrays(GL_LINES, 4, 2);
 
