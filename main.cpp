@@ -44,7 +44,7 @@ class Control {
 		int iWidth;
 		int iHeight;
 		bool running;
-		GLuint iProjLoc, iViewModelLoc, iColorLoc;
+		GLuint iProjLoc, iViewModelLoc, iColorLoc, iVertexLoc, iPointSize;
 		glm::mat4 mProj, mViewModel;
 		GLuint programID;
 		GLuint uiVAO[3];
@@ -157,8 +157,8 @@ void Control::prepare() {
 
 	glBindVertexArray(uiVAO[2]);
 	
-	glBindBuffer(GL_ARRAY_BUFFER, uiVBO[5]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(fParticle), fParticle, GL_STATIC_DRAW); 
+	//glBindBuffer(GL_ARRAY_BUFFER, uiVBO[5]);
+	//glBufferData(GL_ARRAY_BUFFER, sizeof(fParticle), fParticle, GL_STATIC_DRAW); 
 	glEnableVertexAttribArray(0);
  	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
   
@@ -167,13 +167,15 @@ void Control::prepare() {
 	programID = LoadShaders("shader.vert", "shader.frag");
 
 	glUseProgram(programID);
-	vertexLoc = glGetAttribLocation(programID, "inPosition");
+	//vertexLoc = glGetAttribLocation(programID, "inPosition");
 	//colorLoc = glGetAttribLocation(programID, "inColor");
 	//glUseProgram(0);
 
 	iProjLoc = glGetUniformLocation(programID, "projectionMatrix");
 	iViewModelLoc = glGetUniformLocation(programID, "viewMatrix");
 	iColorLoc = glGetUniformLocation(programID, "color");
+	iVertexLoc = glGetUniformLocation(programID, "inPosition");
+	iPointSize = glGetUniformLocation(programID, "pointSize");
 
 	eye = glm::vec3(-1.0f, 1.0f, 5.0f);
 	center = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -263,8 +265,6 @@ void Control::render() {
 		}
 
 
-		//mViewModel = glm::lookAt(glm::vec3(-1.0f, 1.0f, fCamZ), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		//mViewModel = glm::lookAt(eye, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		mViewModel = glm::lookAt(eye, center, glm::vec3(0.0f, 1.0f, 0.0f));
 		mViewModel = glm::rotate(mViewModel, fCamRoty, glm::vec3(0.0f, 1.0f, 0.0f));
 		mProj = glm::perspective(45.0f, (float) iWidth / (float) iHeight, 0.1f, 100.0f);
@@ -274,160 +274,37 @@ void Control::render() {
 		glUniformMatrix4fv(iProjLoc, 1, GL_FALSE, glm::value_ptr(mProj));
 		glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mViewModel));
 
-
 		glm::mat4 mCurrent, temp;
 
 
-		// Triangles
-		glBindVertexArray(uiVAO[0]);
-
-		// beam
-
-		mCurrent = glm::rotate(mViewModel, rotation, glm::vec3(0.0f, 1.0f, 0.0f));
-		mCurrent = glm::scale(mCurrent, glm::vec3(0.2f, 0.2f, 0.2f));
-		mCurrent = glm::translate(mCurrent, glm::vec3(0.0f, up, 0.0f));
-
-
-		for(int i = 0; i < 500; i++) {
-			mCurrent = glm::translate(mCurrent, glm::vec3(0.2f, 0.0f, 0.0f));
-			if(i % 2 == 0) {
-				//temp = glm::translate(mCurrent, glm::vec3(-1.0f, 0.0f, 0.0f));
-				temp = mCurrent;
-			} else {
-				temp = mCurrent;
-			}
-			temp = glm::rotate(temp, rotation * i, glm::vec3(1.0f, 0.0f, 0.0f));
-			glUniform3f(iColorLoc, color[0], color[1], color[2] );
-	    glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(temp)); 
-			//glDrawArrays(GL_TRIANGLES, 0, 3);
-		}
-
-		
-		// big triangle
-
-		mCurrent = glm::translate(mViewModel, glm::vec3(0.0f, -1.0f, 0.0f));
-		mCurrent = glm::translate(mViewModel, glm::vec3( (float)(rand() % 5) / 100.0f, (float)(rand() % 5) / 200.0f -1.0f, 0.0f));
-    glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
-		glUniform3f(iColorLoc, 1.0f, 0.0f, 0.0f);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
-
-		// upmoving triangles
-
-		mCurrent = glm::scale(mViewModel, glm::vec3(0.2f, 0.2f, 0.2f));
-		for(int i = 0; i < 10; i++) {
-			temp = glm::translate(mCurrent, glm::vec3( x[i] + (float)(rand() %5) / 50.0f, y[i], 0.0f));
-			if(y[i] > 5.0f) {
-				if(y[i] > 10.0f) {
-					y[i] = 0.0f;
-				} else {
-					if(i >= 5) {
-						//x[i] -= 0.01f;
-					} else {
-						//x[i] += 0.01f;
-					}
-					temp = glm::rotate(temp, (float) i * y[i] * 100, glm::vec3(0.0f, 0.0f, 1.0f));
-					y[i] += 0.01f;
-				}
-			} else {
-				y[i] += 0.05f;
-			}
-			glUniform3f(iColorLoc, 0.0f, 0.0f, 1.0f);
-    	glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(temp)); 
-			//glDrawArrays(GL_TRIANGLES, 0, 3);
-		}
-
-
-		//
-		
-		mCurrent = glm::scale(mViewModel, glm::vec3(0.1f, 0.1f, 0.1f));
-		mCurrent = glm::translate(mCurrent, glm::vec3( -10.0f, -10.0f, 0.0f));
-		max = 10;	
-		
-		if(go) {
-			for(int i = 1; i <= max; i++ ) {
-			
-				for(int j = 0; j < max; j++) {
-					temp = glm::translate(mCurrent, glm::vec3( (float)i , (float)j, 0.0f));
-					//temp = mCurrent;
-					if(i > max/2){
-						if(j > max/2) {
-							hi[0] += 0.001f;
-							hi[1] += 0.001f;
-							temp = glm::translate(temp, glm::vec3(hi[0], hi[1], 0.0f));
-						} else {
-							hi[2] += 0.001f;
-							hi[3] -= 0.001f;
-							temp = glm::translate(temp, glm::vec3(hi[2], hi[3], 0.0f));
-						}
-					} else {
-						if(j > max/2) {
-							hi[4] -= 0.001f;
-							hi[5] += 0.001f;
-							temp = glm::translate(temp, glm::vec3(hi[4], hi[5], 0.0f));
-						} else {
-							hi[6] -= 0.001f;
-							hi[7] -= 0.001f;
-							temp = glm::translate(temp, glm::vec3(hi[6], hi[7], 0.0f));
-						}
-					}
-
-					glUniform3f(iColorLoc, 1.0f, 1.0f, 0.0f);
-					glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(temp)); 
-					//glDrawArrays(GL_TRIANGLES, 0, 3);
-				}
-			}
-		}
-
-		//
-
-		mCurrent = glm::scale(mViewModel, glm::vec3(0.1f, 0.1f, 0.1f));
-		mCurrent = glm::translate(mCurrent, glm::vec3(5.0f, -5.0f, 0.0f));
-
-		if(go) {	
-			for(int i = 0; i < 360; i++){
-				temp = mCurrent;
-	
-				circlex[i] += cos(i) * 0.02f * speed;
-				circley[i] += sin(i) * 0.02f * speed;
-				temp = glm::translate(temp, glm::vec3( circlex[i], circley[i], 0.0f));
-	
-				glUniform3f(iColorLoc, 0.0f, 1.0f, 1.0f);
-		  	glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(temp)); 
-				//glDrawArrays(GL_TRIANGLES, 0, 3);
-	
-			}
-		}
-
-		
-
 		// Lines (axis)
-		
-		glBindVertexArray(uiVAO[1]);
-		
-		mCurrent = mViewModel;
+   
+
+		glUniform1f(iPointSize, 1.0f);
 
 		glUniform3f(iColorLoc, 1.0f, 0.0f, 0.0f);
-    glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
-		glDrawArrays(GL_LINES, 0, 2);
-		
+		for(float x = -10.0f; x < 10.0f; x++) {
+			glUniform3f(iVertexLoc, x / 10.0f, 0.0f, 0.0f);
+			glDrawArrays(GL_POINTS, 0, 2);
+		}
 		glUniform3f(iColorLoc, 0.0f, 1.0f, 0.0f);
-    glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
-		glDrawArrays(GL_LINES, 2, 2);
-
+		for(float y = -10.0f; y < 10.0f; y++) {
+			glUniform3f(iVertexLoc, 0.0f, y / 10.0f, 0.0f);
+			glDrawArrays(GL_POINTS, 0, 2);
+		}
 		glUniform3f(iColorLoc, 0.0f, 0.0f, 1.0f);
-	  glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
-		glDrawArrays(GL_LINES, 4, 2);
+		for(float z = -10.f; z < 10.0f; z++) {
+			glUniform3f(iVertexLoc, 0.0f, 0.0f, z / 10.0f);
+			glDrawArrays(GL_POINTS, 0, 2);
+		}
 
-    
+
+
     // Particle
 
-   
-		glBindVertexArray(uiVAO[2]);
-    mCurrent = mViewModel;
 
-		glUniform3f(iColorLoc, 1.0f, 0.0f, 0.0f);
-    glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
-		glDrawArrays(GL_POINTS, 0, 2);
+		//glUniform3f(iVertexLoc, 1.0f, 1.0f, 0.0f);
+		//glDrawArrays(GL_POINTS, 0, 2);
 
 		// Test
 
