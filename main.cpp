@@ -43,6 +43,7 @@ class Control {
 		GLint vertexLoc;
 		GLint colorLoc;
 		float color[3];
+		glm::vec3 eye, center;
 
 
 	public:
@@ -108,12 +109,12 @@ void Control::prepare() {
 		0.0f, 0.7f, -1.0f };
 	
 	float fLine[] = {
-		-1.0f, 0.0f, 0.0f,
-		1.0f, 0.0f, 0.0f,
-		0.0f, -1.0f, 0.0f,
- 		0.0f, 1.0f, 0.0f,
-		0.0f, 0.0f, -1.0f,
-		0.0f, 0.0f, 1.0f };
+		-10.0f, 0.0f, 0.0f,
+		10.0f, 0.0f, 0.0f,
+		0.0f, -10.0f, 0.0f,
+ 		0.0f, 10.0f, 0.0f,
+		0.0f, 0.0f, -10.0f,
+		0.0f, 0.0f, 10.0f };
 
 
 	glGenVertexArrays(3, uiVAO);
@@ -142,13 +143,15 @@ void Control::prepare() {
 
 	glUseProgram(programID);
 	vertexLoc = glGetAttribLocation(programID, "inPosition");
-	colorLoc = glGetAttribLocation(programID, "inColor");
+	//colorLoc = glGetAttribLocation(programID, "inColor");
 	//glUseProgram(0);
 
 	iProjLoc = glGetUniformLocation(programID, "projectionMatrix");
 	iViewModelLoc = glGetUniformLocation(programID, "viewMatrix");
 	iColorLoc = glGetUniformLocation(programID, "color");
 
+	eye = glm::vec3(-1.0f, 1.0f, 5.0f);
+	center = glm::vec3(0.0f, 0.0f, 0.0f);
 }
 
 void Control::run() {
@@ -202,23 +205,32 @@ void Control::render() {
 					if(event.key.keysym.sym == SDLK_ESCAPE) {
 						running = false;
 					} else if(event.key.keysym.sym == SDLK_LEFT) {
-						rotation -= 5.0f;
+						//rotation -= 5.0f;
+						center.x -= 0.1f;
 					} else if(event.key.keysym.sym == SDLK_RIGHT) {
-						rotation += 5.0f;
+						//rotation += 5.0f;
+						center.x += 0.1f;
 					} else if(event.key.keysym.sym == SDLK_UP) {
-						up += 0.15f;
+						//up += 0.15f;
+						center.y += 0.1f;
 					} else if(event.key.keysym.sym == SDLK_DOWN) {
-						up -= 0.15f;
+						//up -= 0.15f;
+						center.y -= 0.1f;
 					}	else if(event.key.keysym.sym == 'a') {
-						fCamRoty += 1.0f;
+						//fCamRoty += 1.0f;
+						eye.x -= 0.1f;
 					} else if(event.key.keysym.sym == 'd') {
-						fCamRoty -= 1.0f;
+						//fCamRoty -= 1.0f;
+						eye.x += 0.1f;
 					} else if(event.key.keysym.sym == 'w') {
-						fCamZ -= 0.1f;
+						eye.z -= .1;
 					} else if(event.key.keysym.sym == 's') {
-						fCamZ += 0.1f;
+						eye.z += .1f;
 					} else if(event.key.keysym.sym == 'g') {
 						go = true;
+					} else if(event.key.keysym.sym == 'r') {
+						eye = glm::vec3(-1.0f, 1.0f, 5.0f);
+						center = glm::vec3(0.0f, 0.0f, 0.0f);
 					}
 					//std::cout << event.key.keysym.sym << std::endl;
 					break;
@@ -226,12 +238,13 @@ void Control::render() {
 		}
 
 
-		mViewModel = glm::lookAt(glm::vec3(-1.0f, 1.0f, fCamZ), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		//mViewModel = glm::lookAt(glm::vec3(-1.0f, 1.0f, fCamZ), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		//mViewModel = glm::lookAt(eye, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		mViewModel = glm::lookAt(eye, center, glm::vec3(0.0f, 1.0f, 0.0f));
 		mViewModel = glm::rotate(mViewModel, fCamRoty, glm::vec3(0.0f, 1.0f, 0.0f));
 		mProj = glm::perspective(45.0f, (float) iWidth / (float) iHeight, 0.1f, 100.0f);
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
-
 
 		glUniformMatrix4fv(iProjLoc, 1, GL_FALSE, glm::value_ptr(mProj));
 		glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mViewModel));
