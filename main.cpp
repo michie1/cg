@@ -16,7 +16,9 @@
 
 struct particle {
 	glm::vec3 location;
-	
+  glm::vec3 color;
+  float alpha;
+  float size; 
 };
 
 class Firework {
@@ -26,6 +28,14 @@ class Firework {
 	public:
 		Firework();
 };
+
+Firework::Firework() {
+
+  particles[0].location = glm::vec3(1.0f, 1.0f, 1.0f);
+  particles[0].color = glm::vec3(1.0f, 0.0f, 0.0f);
+  particles[0].alpha = 1.0f;
+}
+
 
 
 class Control {
@@ -37,13 +47,14 @@ class Control {
 		GLuint iProjLoc, iViewModelLoc, iColorLoc;
 		glm::mat4 mProj, mViewModel;
 		GLuint programID;
-		GLuint uiVAO[2];
-		GLuint uiVBO[4];
+		GLuint uiVAO[3];
+		GLuint uiVBO[7];
 		GLuint dataBufferID;
 		GLint vertexLoc;
 		GLint colorLoc;
 		float color[3];
 		glm::vec3 eye, center;
+    Firework fw;
 
 
 	public:
@@ -85,6 +96,7 @@ void Control::initialize() {
 	//glEnable(GL_CULL_FACE);
 	glDepthMask(GL_TRUE);
 	glClearDepth(1.0f);
+  glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 }
 
 void Control::deinitialize() {
@@ -117,7 +129,7 @@ void Control::prepare() {
 		0.0f, 0.0f, 10.0f };
 
 
-	glGenVertexArrays(3, uiVAO);
+	glGenVertexArrays(4, uiVAO);
 	glGenBuffers(7, uiVBO); 
 
 	// Triangle
@@ -137,6 +149,19 @@ void Control::prepare() {
 	glBufferData(GL_ARRAY_BUFFER, sizeof(fLine), fLine, GL_STATIC_DRAW); 
 	glEnableVertexAttribArray(0);
  	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+
+  // Particle
+
+  float fParticle[] = { 1.0f, 1.0f, 1.0f, 2.0f, 2.0f, 2.0f };
+
+	glBindVertexArray(uiVAO[2]);
+	
+	glBindBuffer(GL_ARRAY_BUFFER, uiVBO[5]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(fParticle), fParticle, GL_STATIC_DRAW); 
+	glEnableVertexAttribArray(0);
+ 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+  
 
 
 	programID = LoadShaders("shader.vert", "shader.frag");
@@ -217,11 +242,11 @@ void Control::render() {
 						//up -= 0.15f;
 						center.y -= 0.1f;
 					}	else if(event.key.keysym.sym == 'a') {
-						//fCamRoty += 1.0f;
-						eye.x -= 0.1f;
+						fCamRoty += 1.0f;
+						//eye.x -= 0.1f;
 					} else if(event.key.keysym.sym == 'd') {
-						//fCamRoty -= 1.0f;
-						eye.x += 0.1f;
+						fCamRoty -= 1.0f;
+						//eye.x += 0.1f;
 					} else if(event.key.keysym.sym == 'w') {
 						eye.z -= .1;
 					} else if(event.key.keysym.sym == 's') {
@@ -274,7 +299,7 @@ void Control::render() {
 			temp = glm::rotate(temp, rotation * i, glm::vec3(1.0f, 0.0f, 0.0f));
 			glUniform3f(iColorLoc, color[0], color[1], color[2] );
 	    glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(temp)); 
-			glDrawArrays(GL_TRIANGLES, 0, 3);
+			//glDrawArrays(GL_TRIANGLES, 0, 3);
 		}
 
 		
@@ -308,7 +333,7 @@ void Control::render() {
 			}
 			glUniform3f(iColorLoc, 0.0f, 0.0f, 1.0f);
     	glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(temp)); 
-			glDrawArrays(GL_TRIANGLES, 0, 3);
+			//glDrawArrays(GL_TRIANGLES, 0, 3);
 		}
 
 
@@ -348,7 +373,7 @@ void Control::render() {
 
 					glUniform3f(iColorLoc, 1.0f, 1.0f, 0.0f);
 					glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(temp)); 
-					glDrawArrays(GL_TRIANGLES, 0, 3);
+					//glDrawArrays(GL_TRIANGLES, 0, 3);
 				}
 			}
 		}
@@ -368,7 +393,7 @@ void Control::render() {
 	
 				glUniform3f(iColorLoc, 0.0f, 1.0f, 1.0f);
 		  	glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(temp)); 
-				glDrawArrays(GL_TRIANGLES, 0, 3);
+				//glDrawArrays(GL_TRIANGLES, 0, 3);
 	
 			}
 		}
@@ -393,17 +418,29 @@ void Control::render() {
 	  glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
 		glDrawArrays(GL_LINES, 4, 2);
 
+    
+    // Particle
+
+   
+		glBindVertexArray(uiVAO[2]);
+    mCurrent = mViewModel;
+
+		glUniform3f(iColorLoc, 1.0f, 0.0f, 0.0f);
+    glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
+		glDrawArrays(GL_POINTS, 0, 2);
 
 		// Test
 
-		glUseProgram(programID);
-		glBindVertexArray(uiVAO[2]);
+
+
+		//glUseProgram(programID);
+		//glBindVertexArray(uiVAO[2]);
 
 	  //glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
-		glBindBuffer(GL_ARRAY_BUFFER, dataBufferID);
+		//glBindBuffer(GL_ARRAY_BUFFER, dataBufferID);
 		//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6*sizeof(GLfloat), 0);
 		//glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6*sizeof(GLfloat), 0);
-    glEnableVertexAttribArray(0);
+    //glEnableVertexAttribArray(0);
     //glEnableVertexAttribArray(1);
 		//glDrawArrays(GL_LINES, 0, 2);
 		
