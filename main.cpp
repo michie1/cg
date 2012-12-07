@@ -13,27 +13,55 @@
 #include "shader.h"
 
 #include <time.h>
+#include <list>
 
 struct particle {
 	glm::vec3 location;
-  glm::vec3 color;
+  glm::vec4 color;
   float alpha;
   float size; 
 };
 
 class Firework {
 	private:
-		particle particles[1];
+		std::list<particle> particles;
+		GLuint iViewModelLoc, iColorLoc, iVertexLoc, iPointSize;
 
 	public:
 		Firework();
+		void draw();
+		void setLocations(GLuint vm, GLuint c, GLuint v, GLuint p);
 };
 
 Firework::Firework() {
+	particle p;
+	p.location = glm::vec3(1.0f, 1.0f, 0.0f);
+	p.color = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
+  particles.push_back(p);
 
-  particles[0].location = glm::vec3(1.0f, 1.0f, 1.0f);
-  particles[0].color = glm::vec3(1.0f, 0.0f, 0.0f);
-  particles[0].alpha = 1.0f;
+	p.location.x += 0.1f;
+  particles.push_back(p);
+
+	p.location.x += 0.1f;
+  particles.push_back(p);
+
+}
+
+void Firework::draw() {
+	std::list<particle>::iterator i;
+	for(i = particles.begin(); i != particles.end(); i++) {
+			glUniform4f(iColorLoc, i->color.x, i->color.y, i->color.z, i->color.w);
+			glUniform3f(iVertexLoc, i->location.x, i->location.y, i->location.z);
+			//glUniformVec3f(iVertexLoc, i->location);
+			glDrawArrays(GL_POINTS, 0, 2);
+	}
+}
+
+void Firework::setLocations(GLuint vm, GLuint c, GLuint v, GLuint p) {
+		iViewModelLoc = vm;
+		iColorLoc = c;
+	 	iVertexLoc = v;
+	 	iPointSize = p;
 }
 
 
@@ -176,6 +204,7 @@ void Control::prepare() {
 	iColorLoc = glGetUniformLocation(programID, "color");
 	iVertexLoc = glGetUniformLocation(programID, "inPosition");
 	iPointSize = glGetUniformLocation(programID, "pointSize");
+	fw.setLocations(iViewModelLoc, iColorLoc, iVertexLoc, iPointSize);
 
 	eye = glm::vec3(-1.0f, 1.0f, 5.0f);
 	center = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -191,16 +220,6 @@ void Control::render() {
 	float rotation = 0.0f;
 	float y[10];
 	float x[10];
-
-	float hi[8];
-
-	int max = 5;
-
-	float circlex[360], circley[360];
-	for(int i = 0; i < 360; i++) {
-		circlex[i] = 0; 
-		circley[i] = 0;
-	}
 	
 	int newX, newY;
 	float speed = 1.0f;
@@ -209,16 +228,6 @@ void Control::render() {
 	float fCamRoty = 0.0f;
 	float fCamZ = 5.0f;
 
-
-	bool go = false;
-
-	for(int i = 0; i < 10; i++) {
-		y[i] = 0.0f;
-		x[i] = -(float)i / 1.5;
-		if(i <= 8) {
-			hi[i] = 0.0f;
-		}
-	}
 		
 
 	while(running) {
@@ -254,7 +263,6 @@ void Control::render() {
 					} else if(event.key.keysym.sym == 's') {
 						eye.z += .1f;
 					} else if(event.key.keysym.sym == 'g') {
-						go = true;
 					} else if(event.key.keysym.sym == 'r') {
 						eye = glm::vec3(-1.0f, 1.0f, 5.0f);
 						center = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -282,26 +290,41 @@ void Control::render() {
 
 		glUniform1f(iPointSize, 1.0f);
 
-		glUniform3f(iColorLoc, 1.0f, 0.0f, 0.0f);
+		glUniform4f(iColorLoc, 1.0f, 0.0f, 0.0f, 1.0f);
 		for(float x = -10.0f; x < 10.0f; x++) {
 			glUniform3f(iVertexLoc, x / 10.0f, 0.0f, 0.0f);
 			glDrawArrays(GL_POINTS, 0, 2);
 		}
-		glUniform3f(iColorLoc, 0.0f, 1.0f, 0.0f);
+		glUniform4f(iColorLoc, 0.0f, 1.0f, 0.0f, 1.0f);
 		for(float y = -10.0f; y < 10.0f; y++) {
 			glUniform3f(iVertexLoc, 0.0f, y / 10.0f, 0.0f);
 			glDrawArrays(GL_POINTS, 0, 2);
 		}
-		glUniform3f(iColorLoc, 0.0f, 0.0f, 1.0f);
+		glUniform4f(iColorLoc, 0.0f, 0.0f, 1.0f, 1.0f);
 		for(float z = -10.f; z < 10.0f; z++) {
 			glUniform3f(iVertexLoc, 0.0f, 0.0f, z / 10.0f);
 			glDrawArrays(GL_POINTS, 0, 2);
 		}
 
 
+	/*
 
-    // Particle
+	glUniform3f(iColorLoc, 1.0f, 0.0f, 0.0f);
+	for(float i = -10.0f; i < 10.0f; i++) {	
+		mCurrent = glm::translate(mViewModel, glm::vec3(i / 10.0f, .0f, 0.0f));
+		glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mCurrent)); 
+		glDrawArrays(GL_POINTS, 0, 2);
+	} 
 
+	*/
+
+
+
+
+    // Firework
+
+
+		fw.draw();
 
 		//glUniform3f(iVertexLoc, 1.0f, 1.0f, 0.0f);
 		//glDrawArrays(GL_POINTS, 0, 2);

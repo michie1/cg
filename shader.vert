@@ -2,11 +2,11 @@
 
 uniform mat4 projectionMatrix;
 uniform mat4 viewMatrix;
-uniform vec3 color;
+uniform vec4 color;
 uniform vec3 inPosition;
 uniform float pointSize;
 
-smooth out vec3 theColor;
+smooth out vec4 theColor;
 
 void main()
 {
