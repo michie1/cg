@@ -20,31 +20,78 @@ struct particle {
   glm::vec4 color;
   float alpha;
   float size; 
+	int age;
+	bool isNewest;
+	particle() {
+		age = 0;
+		isNewest = true;
+	}
+	particle copy() {
+		particle n;
+		n.location = location;
+		n.color = color;
+		n.size = size;
+		return n;
+	}
 };
 
 class Firework {
 	private:
 		std::list<particle> particles;
 		GLuint iViewModelLoc, iColorLoc, iVertexLoc, iPointSize;
+		int age;
+
 
 	public:
 		Firework();
+		void insert(std::list<particle>::iterator i, particle p);
+		void calc(int dt);
 		void draw();
 		void setLocations(GLuint vm, GLuint c, GLuint v, GLuint p);
 };
 
 Firework::Firework() {
+	int age = 0;
 	particle p;
+	
 	p.location = glm::vec3(1.0f, 1.0f, 0.0f);
 	p.color = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
-  particles.push_back(p);
+	particles.push_back(p);
 
-	p.location.x += 0.1f;
-  particles.push_back(p);
+	//p = p.copy();
+	//p.location.y += 0.01f;
+	//pushP(p);
+}
 
-	p.location.x += 0.1f;
-  particles.push_back(p);
+void Firework::insert(std::list<particle>::iterator i, particle p) {
+	particles.back().isNewest = false;
+//	particles.push_back(p);
+	particles.insert(i, p);
+	//std::cout << p.location.y << std::endl;
+	std::cout << particles.size() << std::endl;
+}
 
+void Firework::calc(int dt) {
+	age += dt;
+	std::list<particle>::iterator i;
+	particle p;
+	for(i = particles.begin(); i != particles.end(); i++) {
+		i->age += dt;
+
+
+		// Fading away
+		if(i->age > 3000) {
+			i = particles.erase(i);	
+		} else {
+			i->color.w = 1 - (float)i->age / 3000.f;
+		}
+		if(i->isNewest && age < 1000 ) {
+			p = i->copy();	
+			p.location.y += 0.01f;
+			insert(i, p);
+		}
+		//std::cout << i->color.w << std::endl;
+	}
 }
 
 void Firework::draw() {
@@ -83,6 +130,7 @@ class Control {
 		float color[3];
 		glm::vec3 eye, center;
     Firework fw;
+		//Uint32 lastTime, newTime;
 
 
 	public:
@@ -125,6 +173,8 @@ void Control::initialize() {
 	glDepthMask(GL_TRUE);
 	glClearDepth(1.0f);
   glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
+	glEnable( GL_BLEND );
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 void Control::deinitialize() {
@@ -208,6 +258,8 @@ void Control::prepare() {
 
 	eye = glm::vec3(-1.0f, 1.0f, 5.0f);
 	center = glm::vec3(0.0f, 0.0f, 0.0f);
+	
+	
 }
 
 void Control::run() {
@@ -215,6 +267,7 @@ void Control::run() {
 }
 
 void Control::render() {
+
 
 	float up = 0.0f;
 	float rotation = 0.0f;
@@ -229,6 +282,8 @@ void Control::render() {
 	float fCamZ = 5.0f;
 
 		
+	int lasttime = SDL_GetTicks();
+	int newtime;
 
 	while(running) {
 		SDL_Event event;
@@ -323,6 +378,10 @@ void Control::render() {
 
     // Firework
 
+
+		newtime = SDL_GetTicks();
+		fw.calc(newtime - lasttime);
+		lasttime = newtime;
 
 		fw.draw();
 
