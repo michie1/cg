@@ -15,16 +15,28 @@
 #include <time.h>
 #include <list>
 
+float fRand() {
+	return (float) rand() / RAND_MAX;
+}
+
 struct particle {
-	glm::vec3 location;
+	glm::vec3 location, velocity, gravity;
   glm::vec4 color;
   float alpha;
   float size; 
-	int age;
+	float age;
 	bool isNewest;
+	bool exploded;
+	float explodetime;
+	float lifetime;
 	particle() {
-		age = 0;
+		exploded = false;
+		explodetime = 2.0f;
+		age = 0.0f;
+		lifetime = 5.0f;
 		isNewest = true;
+		velocity = glm::vec3(0.0f, 4.0f, 0.0f);
+		gravity = glm::vec3(0.0f, -1.0f, 0.0f);
 	}
 	particle copy() {
 		particle n;
@@ -40,23 +52,27 @@ class Firework {
 		std::list<particle> particles;
 		GLuint iViewModelLoc, iColorLoc, iVertexLoc, iPointSize;
 		int age;
+		glm::vec3 gravity;
 
 
 	public:
 		Firework();
 		void insert(std::list<particle>::iterator i, particle p);
-		void calc(int dt);
+		void calc(float dt);
 		void draw();
 		void setLocations(GLuint vm, GLuint c, GLuint v, GLuint p);
+		glm::vec4 randColor();
 };
 
 Firework::Firework() {
-	int age = 0;
+	float age = 0.0f;
+
 	particle p;
 	
-	p.location = glm::vec3(1.0f, 1.0f, 0.0f);
+	p.location = glm::vec3(0.0f, 0.0f, 0.0f);
 	p.color = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
 	particles.push_back(p);
+
 
 	//p = p.copy();
 	//p.location.y += 0.01f;
@@ -68,28 +84,54 @@ void Firework::insert(std::list<particle>::iterator i, particle p) {
 //	particles.push_back(p);
 	particles.insert(i, p);
 	//std::cout << p.location.y << std::endl;
-	std::cout << particles.size() << std::endl;
+	//std::cout << particles.size() << std::endl;
 }
 
-void Firework::calc(int dt) {
+void Firework::calc(float dt) {
 	age += dt;
 	std::list<particle>::iterator i;
 	particle p;
 	for(i = particles.begin(); i != particles.end(); i++) {
 		i->age += dt;
-
-
+		i->velocity *= 0.99f;
+		i->gravity *= 1.01f;
+		
 		// Fading away
-		if(i->age > 3000) {
+		if(i->age > i->lifetime ) {
 			i = particles.erase(i);	
-		} else {
-			i->color.w = 1 - (float)i->age / 3000.f;
+		} else if(i->exploded == false && i->age > i->explodetime) {
+			i->exploded = true;
+			for(int a = 0; a < 500; a++ ) {
+		 		particle n;
+				n.location = i->location;
+				n.velocity.x = (float)(rand() % 400 ) / 100.0f - 2.0f;
+				n.velocity.y = (float)(rand() % 400 ) / 100.0f - 2.0f;
+				n.velocity.z = (float)(rand() % 400 ) / 100.0f - 2.0f;
+				n.lifetime = (float)(rand() % 3) + 2;
+				//std::cout << n.velocity.x << std::endl;
+				//std::cout << n.lifetime << std::endl;
+				n.exploded = true;
+				n.color = randColor();
+				insert(i, n);
+			}
+
+
+		}	else {
+			i->location += (i->velocity + i->gravity) * dt;
+			i->color.w = 1 - i->age / i->lifetime;
 		}
-		if(i->isNewest && age < 1000 ) {
+
+		
+
+
+		//std::cout << i->location.y << std::endl;
+		/*
+		if(i->isNewest && i->age > 100 && age < 1000 ) {
 			p = i->copy();	
 			p.location.y += 0.01f;
 			insert(i, p);
 		}
+		*/
 		//std::cout << i->color.w << std::endl;
 	}
 }
@@ -111,6 +153,9 @@ void Firework::setLocations(GLuint vm, GLuint c, GLuint v, GLuint p) {
 	 	iPointSize = p;
 }
 
+glm::vec4 Firework::randColor() {
+	return glm::vec4( fRand(), fRand(), fRand(), 1.0f);
+}
 
 
 class Control {
@@ -119,7 +164,7 @@ class Control {
 		int iWidth;
 		int iHeight;
 		bool running;
-		GLuint iProjLoc, iViewModelLoc, iColorLoc, iVertexLoc, iPointSize;
+		GLuint iProjLoc, iViewModelLoc, iColorLoc, iVertexLoc, iPointSizeLoc;
 		glm::mat4 mProj, mViewModel;
 		GLuint programID;
 		GLuint uiVAO[3];
@@ -150,9 +195,7 @@ Control::Control() {
 
 }
 
-float fRand() {
-	return (float) rand() / RAND_MAX;
-}
+
 
 void Control::initialize() {
 	// SDL
@@ -253,8 +296,8 @@ void Control::prepare() {
 	iViewModelLoc = glGetUniformLocation(programID, "viewMatrix");
 	iColorLoc = glGetUniformLocation(programID, "color");
 	iVertexLoc = glGetUniformLocation(programID, "inPosition");
-	iPointSize = glGetUniformLocation(programID, "pointSize");
-	fw.setLocations(iViewModelLoc, iColorLoc, iVertexLoc, iPointSize);
+	iPointSizeLoc = glGetUniformLocation(programID, "pointSize");
+	fw.setLocations(iViewModelLoc, iColorLoc, iVertexLoc, iPointSizeLoc);
 
 	eye = glm::vec3(-1.0f, 1.0f, 5.0f);
 	center = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -267,6 +310,7 @@ void Control::run() {
 }
 
 void Control::render() {
+	
 
 
 	float up = 0.0f;
@@ -276,6 +320,7 @@ void Control::render() {
 	
 	int newX, newY;
 	float speed = 1.0f;
+
 
 
 	float fCamRoty = 0.0f;
@@ -343,7 +388,7 @@ void Control::render() {
 		// Lines (axis)
    
 
-		glUniform1f(iPointSize, 1.0f);
+		glUniform1f(iPointSizeLoc, 1.0f);
 
 		glUniform4f(iColorLoc, 1.0f, 0.0f, 0.0f, 1.0f);
 		for(float x = -10.0f; x < 10.0f; x++) {
@@ -379,8 +424,11 @@ void Control::render() {
     // Firework
 
 
+		glUniform1f(iPointSizeLoc, 4.0f);
+
+
 		newtime = SDL_GetTicks();
-		fw.calc(newtime - lasttime);
+		fw.calc((newtime - lasttime)/1000.0f);
 		lasttime = newtime;
 
 		fw.draw();
