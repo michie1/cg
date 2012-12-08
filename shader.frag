@@ -5,5 +5,5 @@
 
 	void main()
 	{
-		   outputColor = theColor;
+		outputColor = theColor;
 	}

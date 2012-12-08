@@ -19,17 +19,6 @@ float fRand() {
 	return (float) rand() / RAND_MAX;
 }
 
-glm::vec3 randVelocity(glm::vec3 &from) {
-	glm::vec3 v = glm::vec3((float)(rand() % 400 ) / 100.0f - 2.0f, (float)(rand() % 400 ) / 100.0f - 2.0f, (float)(rand() % 400 ) / 100.0f - 2.0f );
-
-	//std::cout << glm::distance(v, from) << std::endl;
-	if(glm::distance(v, from) <= 1.0f) {
-		return v;
-	} else {
-		return randVelocity(from);
-	}
-}
-
 struct particle {
 	glm::vec3 location, velocity, gravity;
   glm::vec4 color;
@@ -40,21 +29,28 @@ struct particle {
 	bool exploded;
 	float explodetime;
 	float lifetime;
+	float timebeforelaunch;
 	particle() {
+		location = glm::vec3( (float)(rand() % 3), 0.0f, 0.0f);
 		exploded = false;
 		explodetime = 1.0f;
 		age = 0.0f;
 		lifetime = 5.0f;
+		timebeforelaunch = 1.0f;
 		isNewest = true;
 		velocity = glm::vec3(0.0f, 4.0f, 0.0f);
 		gravity = glm::vec3(0.0f, -1.0f, 0.0f);
 	}
-	particle copy() {
-		particle n;
-		n.location = location;
-		n.color = color;
-		n.size = size;
-		return n;
+	void normalizeVelocity(float s) {
+		velocity = glm::normalize(velocity) * s;
+	}
+	void randomVelocity(float min, float max) {
+		velocity = glm::vec3(
+		(float)( rand() % ( (int)(max - min) * 100 ) ) / 100.f + min,
+		(float)( rand() % ( (int)(max - min) * 100 ) ) / 100.f + min,
+		(float)( rand() % ( (int)(max - min) * 100 ) ) / 100.f + min );
+		//velocity.z = 0.0f;
+
 	}
 };
 
@@ -79,12 +75,18 @@ Firework::Firework() {
 	float age = 0.0f;
 	glm::vec3 origin = glm::vec3(0.0f, 0.0f, 0.0f);
 
-	particle p;
 	
-	p.location = glm::vec3(0.0f, 0.0f, 0.0f);
-	//p.velocity = randVelocity(origin);
-	p.color = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
-	particles.push_back(p);
+	for(int i = 0; i < 10; i++) {
+		particle p;
+		p.timebeforelaunch = (float)i /10.0f;
+		//p.location = glm::vec3((float)i / 2.0f, 0.0f, 0.0f);
+		//p.velocity = glm::vec3( (float)(rand() % 300) / 100.0f - 1.5f, 4.0f, (float)(rand() % 300) / 100.0f - 1.5f);
+		p.randomVelocity(2.0f, 5.0f);	
+		p.velocity.y += 6.0f;		
+		//p.color = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
+		p.color = randColor();
+		particles.push_back(p);
+	}
 
 
 	//p = p.copy();
@@ -105,50 +107,95 @@ void Firework::calc(float dt) {
 	std::list<particle>::iterator i;
 	particle p;
 	for(i = particles.begin(); i != particles.end(); i++) {
-		i->age += dt;
-		i->velocity *= 0.99f;
-		i->gravity *= 1.01f;
-		
-		// Fading away
-		if(i->age > i->lifetime ) {
-			i = particles.erase(i);	
-		} else if(i->exploded == false && i->age > i->explodetime) {
-			i->exploded = true;
-			for(int a = 0; a < 500; a++ ) {
-		 		particle n;
-				n.location = i->location;
-				/*
-				n.velocity.x = (float)(rand() % 400 ) / 100.0f - 2.0f;
-				n.velocity.y = (float)(rand() % 400 ) / 100.0f - 2.0f;
-				n.velocity.z = (float)(rand() % 400 ) / 100.0f - 2.0f;
-				*/
-				n.velocity = 0.2f * i->velocity + randVelocity(i->location);
-				n.lifetime = (float)(rand() % 4);
-				//std::cout << n.velocity.x << std::endl;
-				//std::cout << n.lifetime << std::endl;
-				n.exploded = true;
-				n.color = randColor();
-				insert(i, n);
-			}
-			i = particles.erase(i);	
+		i->timebeforelaunch -= dt;
+		if(i->timebeforelaunch < 0.0f) {
+				i->age += dt;
+				i->velocity *= 0.99f;
+				i->gravity *= 1.01f;
 
-		}	else {
-			i->location += (i->velocity + i->gravity) * dt;
-			i->color.w = 1 - i->age / i->lifetime;
+				//i->velocity *= 0.0f;
+				//i->gravity *= 0.0f;
+				
+				// Fading away
+				if(i->age > i->lifetime ) {
+					i = particles.erase(i);	
+				} else if(i->exploded == false && i->age > i->explodetime) {
+					i->exploded = true;
+					//std::cout << "explode" << std::endl;
+					//if(i->location == NULL) {
+						//std::cout << "NULL" << std::endl;
+					//}
+					//std::cout << i->location.x << " " << i->location.y << " " << i->location.z << std::endl;
+					//std::cout << "after location cout" << std::endl;
+
+					
+					int salvos = rand() % 3 + 1; 
+					int temp;
+					glm::vec4 c[2];
+				 	c[0] = i->color;	
+				 	c[1] = randColor();	
+					//std::cout << salvos << std::endl;
+					for(int a = 0; a < rand() % 100 + 500; a++ ) {
+						particle n;
+						n.location = i->location;
+
+						//std::cout << "before velocity a" << std::endl;
+						//in.velocity = 0.2f * i->velocity + randVelocity(i->location);
+						//n.velocity = 1.0f * i->velocity;
+						//std::cout << "before velocity b" << std::endl;
+					 
+						//n.gravity = glm::vec3(0.0f, 0.0f, 0.0f);
+						//n.velocity += randVelocity(i->location);
+
+						n.randomVelocity(-2.0, 2.0f);
+						n.normalizeVelocity(3.0f);
+						n.velocity += 0.5f * i->velocity;
+						
+						if(salvos == 1) {
+							n.timebeforelaunch = 0.0f;
+							n.color = c[0];
+						} else {
+							temp = rand() % salvos;
+							n.timebeforelaunch = temp * 0.35f;
+							n.color = c[temp % 2];
+						}
+						
+						//n.velocity += randVelocity(i->location.x, i->location.y, i->location.z);
+						//n.velocity = glm::vec3( (float)(rand() % 300) / 100.0f - 1.5f, 4.0f, (float)(rand() % 300) / 100.0f - 1.5f);
+						//std::cout << "after velocity" << std::endl;
+
+						n.lifetime = (float)(rand() % 4);
+						//std::cout << n.velocity.x << std::endl;
+						//std::cout << n.lifetime << std::endl;
+						n.exploded = true;
+						//n.color = randColor();
+						n.color.w = 0.0f;
+						insert(i, n);
+					}
+					i = particles.erase(i);	
+					//std::cout << particles.size() << std::endl;
+				
+					particle p;
+					p.timebeforelaunch = 1.0f;
+					p.location = glm::vec3(0.0f, 0.0f, 0.0f);
+					//p.velocity = glm::vec3( (float)(rand() % 300) / 100.0f - 1.5f, 4.0f, (float)(rand() % 300) / 100.0f - 1.5f);
+					//p.velocity = glm::vec3(0.0f, 4.0f, 0.0f);
+					p.randomVelocity(-5.0f, 5.0f);	
+					p.velocity.y = abs(p.velocity.y) + 4.0f;		
+					//p.randomVelocity(-5.0f, 5.0f);	
+					//p.velocity.y = abs(p.velocity.y) + 2.0f;		
+					//p.color = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
+					p.color = randColor();
+					particles.push_back(p);
+
+				}	else {
+					//if( i->exploded == false) {
+						i->location += (i->velocity + i->gravity) * dt;
+						i->color.w = 1 - i->age / i->lifetime;
+					//}
+				}
+				//std::cout << i->color.w << std::endl;
 		}
-
-		
-
-
-		//std::cout << i->location.y << std::endl;
-		/*
-		if(i->isNewest && i->age > 100 && age < 1000 ) {
-			p = i->copy();	
-			p.location.y += 0.01f;
-			insert(i, p);
-		}
-		*/
-		//std::cout << i->color.w << std::endl;
 	}
 }
 
@@ -234,6 +281,9 @@ void Control::initialize() {
   glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 	glEnable( GL_BLEND );
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glClear(GL_ACCUM_BUFFER_BIT);
+	glShadeModel(GL_SMOOTH);
+	glEnable(GL_POINT_SMOOTH);
 }
 
 void Control::deinitialize() {
@@ -248,24 +298,6 @@ void Control::prepare() {
 	//GLuint uiVAO[2];
 	//GLuint uiVBO[4];
 	running = true;
-	color[0] = fRand();
-	color[1] = fRand();
-	color[2] = fRand();
-
-	/*
-	float fTriangle[] = {
-		-0.4f, 0.1f, -1.0f,
-		0.4f, 0.1f, -1.0f,
-		0.0f, 0.7f, -1.0f };
-	
-	float fLine[] = {
-		-10.0f, 0.0f, 0.0f,
-		10.0f, 0.0f, 0.0f,
-		0.0f, -10.0f, 0.0f,
- 		0.0f, 10.0f, 0.0f,
-		0.0f, 0.0f, -10.0f,
-		0.0f, 0.0f, 10.0f };
-	*/
 
 	glGenVertexArrays(4, uiVAO);
 	glGenBuffers(7, uiVBO); 
@@ -294,7 +326,7 @@ void Control::prepare() {
 
   // Particle
 
-  float fParticle[] = { 1.0f, 1.0f, 1.0f, 2.0f, 2.0f, 2.0f };
+  //float fParticle[] = { 1.0f, 1.0f, 1.0f, 2.0f, 2.0f, 2.0f };
 
 	glBindVertexArray(uiVAO[2]);
 	
@@ -319,8 +351,8 @@ void Control::prepare() {
 	iPointSizeLoc = glGetUniformLocation(programID, "pointSize");
 	fw.setLocations(iViewModelLoc, iColorLoc, iVertexLoc, iPointSizeLoc);
 
-	eye = glm::vec3(-1.0f, 1.0f, 5.0f);
-	center = glm::vec3(0.0f, 0.0f, 0.0f);
+	eye = glm::vec3(-1.0f, 1.0f, 12.0f);
+	center = glm::vec3(0.0f, 2.0f, 0.0f);
 	
 	
 }
@@ -478,7 +510,7 @@ void Control::render() {
 		//glDrawArrays(GL_LINES, 0, 2);
 		
 		SDL_GL_SwapBuffers();
-		 glAccum(GL_ACCUM, 0.9f);
+		glAccum(GL_ACCUM, 0.9f);
 	}
 }
 
