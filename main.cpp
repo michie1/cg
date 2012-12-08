@@ -19,6 +19,17 @@ float fRand() {
 	return (float) rand() / RAND_MAX;
 }
 
+glm::vec3 randVelocity(glm::vec3 &from) {
+	glm::vec3 v = glm::vec3((float)(rand() % 400 ) / 100.0f - 2.0f, (float)(rand() % 400 ) / 100.0f - 2.0f, (float)(rand() % 400 ) / 100.0f - 2.0f );
+
+	//std::cout << glm::distance(v, from) << std::endl;
+	if(glm::distance(v, from) <= 1.0f) {
+		return v;
+	} else {
+		return randVelocity(from);
+	}
+}
+
 struct particle {
 	glm::vec3 location, velocity, gravity;
   glm::vec4 color;
@@ -31,7 +42,7 @@ struct particle {
 	float lifetime;
 	particle() {
 		exploded = false;
-		explodetime = 2.0f;
+		explodetime = 1.0f;
 		age = 0.0f;
 		lifetime = 5.0f;
 		isNewest = true;
@@ -66,10 +77,12 @@ class Firework {
 
 Firework::Firework() {
 	float age = 0.0f;
+	glm::vec3 origin = glm::vec3(0.0f, 0.0f, 0.0f);
 
 	particle p;
 	
 	p.location = glm::vec3(0.0f, 0.0f, 0.0f);
+	//p.velocity = randVelocity(origin);
 	p.color = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
 	particles.push_back(p);
 
@@ -104,17 +117,20 @@ void Firework::calc(float dt) {
 			for(int a = 0; a < 500; a++ ) {
 		 		particle n;
 				n.location = i->location;
+				/*
 				n.velocity.x = (float)(rand() % 400 ) / 100.0f - 2.0f;
 				n.velocity.y = (float)(rand() % 400 ) / 100.0f - 2.0f;
 				n.velocity.z = (float)(rand() % 400 ) / 100.0f - 2.0f;
-				n.lifetime = (float)(rand() % 3) + 2;
+				*/
+				n.velocity = 0.2f * i->velocity + randVelocity(i->location);
+				n.lifetime = (float)(rand() % 4);
 				//std::cout << n.velocity.x << std::endl;
 				//std::cout << n.lifetime << std::endl;
 				n.exploded = true;
 				n.color = randColor();
 				insert(i, n);
 			}
-
+			i = particles.erase(i);	
 
 		}	else {
 			i->location += (i->velocity + i->gravity) * dt;
@@ -152,7 +168,7 @@ void Firework::setLocations(GLuint vm, GLuint c, GLuint v, GLuint p) {
 	 	iVertexLoc = v;
 	 	iPointSize = p;
 }
-
+ 
 glm::vec4 Firework::randColor() {
 	return glm::vec4( fRand(), fRand(), fRand(), 1.0f);
 }
@@ -236,6 +252,7 @@ void Control::prepare() {
 	color[1] = fRand();
 	color[2] = fRand();
 
+	/*
 	float fTriangle[] = {
 		-0.4f, 0.1f, -1.0f,
 		0.4f, 0.1f, -1.0f,
@@ -248,29 +265,32 @@ void Control::prepare() {
  		0.0f, 10.0f, 0.0f,
 		0.0f, 0.0f, -10.0f,
 		0.0f, 0.0f, 10.0f };
-
+	*/
 
 	glGenVertexArrays(4, uiVAO);
 	glGenBuffers(7, uiVBO); 
 
 	// Triangle
+	
+	/*
 	glBindVertexArray(uiVAO[0]);
 
 	glBindBuffer(GL_ARRAY_BUFFER, uiVBO[0]);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(fTriangle), fTriangle, GL_STATIC_DRAW); 
 	glEnableVertexAttribArray(0);
  	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	
+	*/	
 
 	// Line
 	
 	glBindVertexArray(uiVAO[1]);
 	
 	glBindBuffer(GL_ARRAY_BUFFER, uiVBO[2]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(fLine), fLine, GL_STATIC_DRAW); 
-	glEnableVertexAttribArray(0);
- 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	//glBufferData(GL_ARRAY_BUFFER, sizeof(fLine), fLine, GL_STATIC_DRAW); 
+	//glEnableVertexAttribArray(0);
+ 	//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
+	
 
   // Particle
 
@@ -377,6 +397,8 @@ void Control::render() {
 		mViewModel = glm::rotate(mViewModel, fCamRoty, glm::vec3(0.0f, 1.0f, 0.0f));
 		mProj = glm::perspective(45.0f, (float) iWidth / (float) iHeight, 0.1f, 100.0f);
 
+
+		glClearAccum(0.0f, 0.0f, 0.0f, 0.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 
 		glUniformMatrix4fv(iProjLoc, 1, GL_FALSE, glm::value_ptr(mProj));
@@ -384,6 +406,10 @@ void Control::render() {
 
 		glm::mat4 mCurrent, temp;
 
+
+		// Trials
+		glAccum(GL_RETURN, 0.95f);
+		glClear(GL_ACCUM_BUFFER_BIT);
 
 		// Lines (axis)
    
@@ -424,7 +450,7 @@ void Control::render() {
     // Firework
 
 
-		glUniform1f(iPointSizeLoc, 4.0f);
+		glUniform1f(iPointSizeLoc, 2.0f);
 
 
 		newtime = SDL_GetTicks();
@@ -452,6 +478,7 @@ void Control::render() {
 		//glDrawArrays(GL_LINES, 0, 2);
 		
 		SDL_GL_SwapBuffers();
+		 glAccum(GL_ACCUM, 0.9f);
 	}
 }
 
