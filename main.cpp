@@ -38,7 +38,7 @@ struct particle {
 		timebeforelaunch = 1.0f;
 		gravity = glm::vec3(0.0f, -1.0f, 0.0f);
 		color.w = 0.0f;
-		pointSize = 8.0f;
+		pointSize = 6.0f;
 	}
 };
 
