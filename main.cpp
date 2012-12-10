@@ -9,6 +9,7 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
+#include "glm/gtx/perpendicular.hpp"
 
 #include "shader.h"
 
@@ -30,14 +31,16 @@ struct particle {
 	float lifetime;
 	float timebeforelaunch;
 	float pointSize;
+	bool follow; // follow location as eye position
 	particle() {
 		exploded = false;
+		follow = false;
 		explodetime = (float)((rand() % 10)) / 10.f + 1.0f; // Explode between 1 and 2 seconds.
 		age = 0.0f;
 		lifetime = 4.0f;
 		timebeforelaunch = 1.0f;
 		gravity = glm::vec3(0.0f, -1.0f, 0.0f);
-		color.w = 0.0f;
+		//color.w = 0.0f;
 		pointSize = 6.0f;
 	}
 };
@@ -56,11 +59,13 @@ class Firework {
 		void draw();
 		void setLocations(GLuint vm, GLuint c, GLuint v, GLuint p);
 		bool z; // z enabled?
+		glm::vec3 rocket;
 };
 
 Firework::Firework() {
 	z = true;
 	add();
+	particles.front().follow = true;
 }
 
 void Firework::add() {
@@ -69,6 +74,7 @@ void Firework::add() {
 	p.velocity = randomVelocity(-2.0f, 2.0f);
 	p.velocity.y += 6.0f;		
 	p.color = randColor(0.0f);
+	//p.color = randColor(1.0f);
 	particles.push_back(p);
 }
 
@@ -96,6 +102,7 @@ void Firework::calc(float dt) {
 					for(int a = 0; a < rand() % 100 + 500; a++ ) {
 						particle n;
 						n.location = i->location;
+						//n.follow = false;
 
 						n.velocity = randomVelocity(-2.0f, 2.0f);
 						if(z == false) {
@@ -120,13 +127,21 @@ void Firework::calc(float dt) {
 						n.pointSize = (float)(rand() % 30) / 10.0f + 1.0f;
 						particles.insert(i, n);
 					}
+
+					bool f = i->follow;
 					i = particles.erase(i);	
-				
 					add();
+					if(f) {
+						particles.back().follow = true;
+					}
 
 				}	else {
 					i->location += (i->velocity + i->gravity) * dt;
-					i->color.w = 1 - i->age / i->lifetime;
+					i->color.w = 1 - i->age / i->lifetime; // fade alpha
+					if(i->follow) {
+						rocket = i->location;
+					}
+					//std::cout << eye.y << std::endl;
 				}
 		}
 	}
@@ -231,6 +246,7 @@ void Control::run() {
 	float camRoty = 0.0f;
 	int lasttime = SDL_GetTicks();
 	int newtime;
+	bool follow = false;
 
 	while(running) {
 		SDL_Event event;
@@ -282,14 +298,23 @@ void Control::run() {
 							eye = glm::vec3(-1.0f, 1.0f, 12.0f);
 							center = glm::vec3(0.0f, 2.0f, 0.0f);
 							break;
+						case 'f':
+							if(follow) {
+								eye = glm::vec3(-1.0f, 1.0f, 12.0f);
+								center = glm::vec3(0.0f, 2.0f, 0.0f);
+								follow = false;
+							} else {
+								follow = true;	
+							}
 					}	
 					break;
 				}
 			}
 
-
 		mViewModel = glm::lookAt(eye, center, glm::vec3(0.0f, 1.0f, 0.0f));
-		mViewModel = glm::rotate(mViewModel, camRoty, glm::vec3(0.0f, 1.0f, 0.0f));
+		if(follow == false) {
+			mViewModel = glm::rotate(mViewModel, camRoty, glm::vec3(0.0f, 1.0f, 0.0f));
+		}
 		mProj = glm::perspective(45.0f, (float) iWidth / (float) iHeight, 0.1f, 100.0f);
 
 		glClearAccum(0.0f, 0.0f, 0.0f, 0.0f);
@@ -328,6 +353,10 @@ void Control::run() {
 
 		newtime = SDL_GetTicks();
 		fw.calc((newtime - lasttime) / 1000.0f);
+		if(follow) {
+			eye = fw.rocket * 2.5f;
+			center = fw.rocket;
+		}
 		lasttime = newtime;
 		fw.draw();
 
@@ -348,8 +377,8 @@ int main(int argc, char** argv)
 {
 	srand(time(NULL));
 	Control c;
-	c.setWidth(500);
-	c.setHeight(500);
+	c.setWidth(1280);
+	c.setHeight(720);
 	c.initialize();
 
 	c.prepare();
