@@ -16,8 +16,6 @@
 #include <time.h>
 #include <list>
 
-
-
 float fRand() {
 	return (float) rand() / RAND_MAX;
 }
@@ -72,7 +70,6 @@ Firework::Firework() {
 	particles.front().follow = true; // Follow the first particle, when follow is enabled.
 }
 
-
 // Add new rocket
 void Firework::add() {
 	particle p;
@@ -86,11 +83,20 @@ void Firework::add() {
 void Firework::playExplode(int salvos) {
 	Mix_Chunk *music;
 	Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 2048);
-	if(salvos == 1) {
-		music = Mix_LoadWAV("explode.wav");
-	} else {
-		music = Mix_LoadWAV("explode2.wav");
-	}
+	switch(salvos) {
+		case 1:
+			music = Mix_LoadWAV("explode.wav");
+			break;
+		case 2:
+			music = Mix_LoadWAV("explode2.wav");
+			break;
+		case 3:
+			music = Mix_LoadWAV("explode3.wav");
+			break;
+		case 4:
+			music = Mix_LoadWAV("explode4.wav");
+			break;
+	}	
 	Mix_PlayChannel(-1,music,0);
 }
 
@@ -112,6 +118,9 @@ void Firework::calc(float dt) {
 					i->exploded = true;
 					
 					int salvos = rand() % 3 + 1; // Amount of shots at explosion, with delay between shots, between 1 and 4.
+					playExplode(salvos);
+
+
 					int temp;
 					glm::vec4 c[2]; // Two colors
 				 	c[0] = i->color;	
@@ -123,7 +132,6 @@ void Firework::calc(float dt) {
 						amount = rand() % 100 + 500; // Between 500 and 600 particles per rocket.
 					}
  					
-					playExplode(salvos);
 
 					for(int a = 0; a < amount; a++ ) {
 						particle n;
@@ -243,7 +251,6 @@ void Control::initialize() {
 		exit(1);
 	}
 	
-
 	// GLEW
 	glewInit();
 
@@ -392,7 +399,6 @@ void Control::run() {
 			glUniform3f(iVertexLoc, 0.0f, 0.0f, z / 10.0f);
 			glDrawArrays(GL_POINTS, 0, 2);
 		}
-
 
     // Firework
 		newtime = SDL_GetTicks();
