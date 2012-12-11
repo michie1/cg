@@ -5,6 +5,7 @@
 #include "GL/gl.h"
 #include "GL/glu.h"
 #include "SDL/SDL.h"
+#include "SDL/SDL_mixer.h"
 
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
@@ -14,6 +15,8 @@
 
 #include <time.h>
 #include <list>
+
+
 
 float fRand() {
 	return (float) rand() / RAND_MAX;
@@ -55,6 +58,7 @@ class Firework {
 	public:
 		Firework();
 		void add();
+		void playExplode(int salvos);
 		void calc(float dt);
 		void draw();
 		void setLocations(GLuint vm, GLuint c, GLuint v, GLuint p);
@@ -79,6 +83,17 @@ void Firework::add() {
 	particles.push_back(p);
 }
 
+void Firework::playExplode(int salvos) {
+	Mix_Chunk *music;
+	Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 2048);
+	if(salvos == 1) {
+		music = Mix_LoadWAV("explode.wav");
+	} else {
+		music = Mix_LoadWAV("explode2.wav");
+	}
+	Mix_PlayChannel(-1,music,0);
+}
+
 // Calculate the new positions of the particles
 void Firework::calc(float dt) {
 	age += dt;
@@ -96,7 +111,7 @@ void Firework::calc(float dt) {
 				} else if(i->exploded == false && i->age > i->explodetime) { // Time for explosion when not yet exploded.
 					i->exploded = true;
 					
-					int salvos = rand() % 3 + 1; // Amount of shots at explosion, with delay between shots.
+					int salvos = rand() % 3 + 1; // Amount of shots at explosion, with delay between shots, between 1 and 4.
 					int temp;
 					glm::vec4 c[2]; // Two colors
 				 	c[0] = i->color;	
@@ -107,6 +122,9 @@ void Firework::calc(float dt) {
 					} else {
 						amount = rand() % 100 + 500; // Between 500 and 600 particles per rocket.
 					}
+ 					
+					playExplode(salvos);
+
 					for(int a = 0; a < amount; a++ ) {
 						particle n;
 						n.location = i->location;
@@ -208,12 +226,23 @@ class Control {
 
 void Control::initialize() {
 	// SDL
-	//SDL_Init(SDL_INIT_EVERYTHING); 
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
 	SDL_SetVideoMode(iWidth, iHeight, 32, SDL_OPENGL | SDL_GL_DOUBLEBUFFER);
 	SDL_EnableKeyRepeat(1, 1);
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
 	SDL_WM_SetCaption("Computer Graphics Final Project 2012", NULL);		
+
+	// SDL sound
+	int audio_rate = 22050;
+	Uint16 audio_format = AUDIO_S16SYS;
+	int audio_channels = 2;
+	int audio_buffers = 4096;
+
+	if(Mix_OpenAudio(audio_rate, audio_format, audio_channels, audio_buffers) != 0) {
+		fprintf(stderr, "Unable to initialize audio: %s\n", Mix_GetError());
+		exit(1);
+	}
+	
 
 	// GLEW
 	glewInit();
