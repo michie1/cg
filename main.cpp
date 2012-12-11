@@ -99,7 +99,13 @@ void Firework::calc(float dt) {
 					glm::vec4 c[2]; // Two colors
 				 	c[0] = i->color;	
 				 	c[1] = randColor(0.0f);	
-					for(int a = 0; a < rand() % 100 + 500; a++ ) {
+					int amount;
+					if(rand() % 50 == 0) { // Once in a while a big explosion 
+						amount = 10000;	
+					} else {
+						amount = rand() % 100 + 500;
+					}
+					for(int a = 0; a < amount; a++ ) {
 						particle n;
 						n.location = i->location;
 						//n.follow = false;
