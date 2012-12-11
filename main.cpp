@@ -9,7 +9,6 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
-#include "glm/gtx/perpendicular.hpp"
 
 #include "shader.h"
 
@@ -20,6 +19,7 @@ float fRand() {
 	return (float) rand() / RAND_MAX;
 }
 
+// A particle with all their own properties.
 struct particle {
 	glm::vec3 location, velocity, gravity;
   glm::vec4 color;
@@ -40,11 +40,11 @@ struct particle {
 		lifetime = 4.0f;
 		timebeforelaunch = 1.0f;
 		gravity = glm::vec3(0.0f, -1.0f, 0.0f);
-		//color.w = 0.0f;
 		pointSize = 6.0f;
 	}
 };
 
+// Firework class for controling the particles
 class Firework {
 	private:
 		std::list<particle> particles;
@@ -58,26 +58,28 @@ class Firework {
 		void calc(float dt);
 		void draw();
 		void setLocations(GLuint vm, GLuint c, GLuint v, GLuint p);
-		bool z; // z enabled?
+		bool z; // Z enabled?
 		glm::vec3 rocket;
 };
 
 Firework::Firework() {
 	z = true;
 	add();
-	particles.front().follow = true;
+	particles.front().follow = true; // Follow the first particle, when follow is enabled.
 }
 
+
+// Add new rocket
 void Firework::add() {
 	particle p;
 	p.location = glm::vec3( (float)(rand() % 4) - 2.0f, 0.0f, 0.0f);
 	p.velocity = randomVelocity(-2.0f, 2.0f);
-	p.velocity.y += 6.0f;		
+	p.velocity.y += 6.0f; // We want the particle to go high	
 	p.color = randColor(0.0f);
-	//p.color = randColor(1.0f);
 	particles.push_back(p);
 }
 
+// Calculate the new positions of the particles
 void Firework::calc(float dt) {
 	age += dt;
 	std::list<particle>::iterator i;
@@ -91,10 +93,10 @@ void Firework::calc(float dt) {
 
 				if(i->age > i->lifetime ) { // Remove old particles
 					i = particles.erase(i);	
-				} else if(i->exploded == false && i->age > i->explodetime) { // time for explosion when not yet exploded
+				} else if(i->exploded == false && i->age > i->explodetime) { // Time for explosion when not yet exploded.
 					i->exploded = true;
 					
-					int salvos = rand() % 3 + 1; // amount of shots at explosion, with delay between shots.
+					int salvos = rand() % 3 + 1; // Amount of shots at explosion, with delay between shots.
 					int temp;
 					glm::vec4 c[2]; // Two colors
 				 	c[0] = i->color;	
@@ -103,19 +105,21 @@ void Firework::calc(float dt) {
 					if(rand() % 50 == 0) { // Once in a while a big explosion 
 						amount = 10000;	
 					} else {
-						amount = rand() % 100 + 500;
+						amount = rand() % 100 + 500; // Between 500 and 600 particles per rocket.
 					}
 					for(int a = 0; a < amount; a++ ) {
 						particle n;
 						n.location = i->location;
-						//n.follow = false;
 
 						n.velocity = randomVelocity(-2.0f, 2.0f);
-						if(z == false) {
+						if(z == false) { // If z is disabled, the particles will not explode only in the x and y direction.
 							n.velocity.z = 0.0f;
 						}
-						n.velocity = glm::normalize(n.velocity) * 3.0f;
-						n.velocity += 0.5f * i->velocity;
+
+						// Normalize the vector, so every distance from the particle from the rocket are the same.
+						// Gives a sphere shape instead of a cube.
+						n.velocity = glm::normalize(n.velocity) * 3.0f; 		
+						n.velocity += 0.5f * i->velocity; // Take the velocity of the rocket into account.
 						
 						if(salvos == 1) {
 							n.timebeforelaunch = 0.0f;
@@ -130,12 +134,12 @@ void Firework::calc(float dt) {
 						n.exploded = true;
 
 						n.color.w = 0.0f; // Make invisible till launch
-						n.pointSize = (float)(rand() % 30) / 10.0f + 1.0f;
+						n.pointSize = (float)(rand() % 30) / 10.0f + 1.0f; // Point size between 1 and 4
 						particles.insert(i, n);
 					}
 
 					bool f = i->follow;
-					i = particles.erase(i);	
+					i = particles.erase(i);	// Remove exploded rocket.
 					add();
 					if(f) {
 						particles.back().follow = true;
@@ -143,16 +147,16 @@ void Firework::calc(float dt) {
 
 				}	else {
 					i->location += (i->velocity + i->gravity) * dt;
-					i->color.w = 1 - i->age / i->lifetime; // fade alpha
+					i->color.w = 1 - i->age / i->lifetime; // Fade alpha
 					if(i->follow) {
-						rocket = i->location;
+						rocket = i->location; // Set the eye to the rocket location.
 					}
-					//std::cout << eye.y << std::endl;
 				}
 		}
 	}
 }
 
+// Draw all the particles
 void Firework::draw() {
 	std::list<particle>::iterator i;
 	for(i = particles.begin(); i != particles.end(); i++) {
@@ -181,6 +185,7 @@ glm::vec3 Firework::randomVelocity(float min, float max) {
 		(float)( rand() % ( (int)(max - min) * 100 ) ) / 100.f + min );
 }
 
+// A class for setting up SDL (and the event handler), glew and the firework class.
 class Control {
 	private:
 		int iWidth;
@@ -203,7 +208,8 @@ class Control {
 
 void Control::initialize() {
 	// SDL
-	SDL_Init(SDL_INIT_EVERYTHING); 
+	//SDL_Init(SDL_INIT_EVERYTHING); 
+	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
 	SDL_SetVideoMode(iWidth, iHeight, 32, SDL_OPENGL | SDL_GL_DOUBLEBUFFER);
 	SDL_EnableKeyRepeat(1, 1);
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
@@ -233,6 +239,7 @@ void Control::deinitialize() {
 void Control::prepare() {
 	running = true;
 
+	// Shaders
 	programID = LoadShaders("shader.vert", "shader.frag");
 	glUseProgram(programID);
 
@@ -255,6 +262,8 @@ void Control::run() {
 	bool follow = false;
 
 	while(running) {
+
+		// Event handler
 		SDL_Event event;
 		while(SDL_PollEvent(&event)) {
 			switch(event.type) {
@@ -303,6 +312,7 @@ void Control::run() {
 						case 'r':
 							eye = glm::vec3(-1.0f, 1.0f, 12.0f);
 							center = glm::vec3(0.0f, 2.0f, 0.0f);
+							camRoty = 0.0f;
 							break;
 						case 'f':
 							if(follow) {
@@ -317,6 +327,7 @@ void Control::run() {
 				}
 			}
 
+		//  Setup the camera
 		mViewModel = glm::lookAt(eye, center, glm::vec3(0.0f, 1.0f, 0.0f));
 		if(follow == false) {
 			mViewModel = glm::rotate(mViewModel, camRoty, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -328,7 +339,6 @@ void Control::run() {
 
 		glUniformMatrix4fv(iProjLoc, 1, GL_FALSE, glm::value_ptr(mProj));
 		glUniformMatrix4fv(iViewModelLoc, 1, GL_FALSE, glm::value_ptr(mViewModel));
-
 
 		// Trials
 		glAccum(GL_RETURN, 0.95f);
@@ -356,7 +366,6 @@ void Control::run() {
 
 
     // Firework
-
 		newtime = SDL_GetTicks();
 		fw.calc((newtime - lasttime) / 1000.0f);
 		if(follow) {
