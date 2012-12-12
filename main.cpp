@@ -62,10 +62,12 @@ class Firework {
 		void setLocations(GLuint vm, GLuint c, GLuint v, GLuint p);
 		bool z; // Z enabled?
 		glm::vec3 rocket;
+		bool nosound;
 };
 
 Firework::Firework() {
 	z = true;
+	nosound = false;
 	add();
 	particles.front().follow = true; // Follow the first particle, when follow is enabled.
 }
@@ -117,16 +119,17 @@ void Firework::calc(float dt) {
 				} else if(i->exploded == false && i->age > i->explodetime) { // Time for explosion when not yet exploded.
 					i->exploded = true;
 					
-					int salvos = rand() % 3 + 1; // Amount of shots at explosion, with delay between shots, between 1 and 4.
-					playExplode(salvos);
-
+					int salvos = rand() % 4 + 1; // Amount of shots at explosion, with delay between shots, between 1 and 4.
+					if(nosound == false) {
+						playExplode(salvos);
+					}
 
 					int temp;
 					glm::vec4 c[2]; // Two colors
 				 	c[0] = i->color;	
 				 	c[1] = randColor(0.0f);	
 					int amount;
-					if(rand() % 50 == 0) { // Once in a while a big explosion 
+					if(salvos == 1 && rand() % 10 == 0) { // Once in a while a big explosion 
 						amount = 10000;	
 					} else {
 						amount = rand() % 100 + 500; // Between 500 and 600 particles per rocket.
@@ -358,6 +361,8 @@ void Control::run() {
 							} else {
 								follow = true;	
 							}
+						case 'n':
+							fw.nosound = !fw.nosound;
 					}	
 					break;
 				}
