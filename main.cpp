@@ -3,7 +3,6 @@
 
 #include "GL/glew.h"
 #include "GL/gl.h"
-#include "GL/glu.h"
 #include "SDL/SDL.h"
 #include "SDL/SDL_mixer.h"
 
@@ -45,7 +44,7 @@ struct particle {
 	}
 };
 
-// Firework class for controling the particles
+// Firework class for controllering the particles
 class Firework {
 	private:
 		std::list<particle> particles;
@@ -99,7 +98,7 @@ void Firework::playExplode(int salvos) {
 			music = Mix_LoadWAV("explode4.wav");
 			break;
 	}	
-	Mix_PlayChannel(-1,music,0);
+	Mix_PlayChannel(-1, music, 0);
 }
 
 // Calculate the new positions of the particles
@@ -134,7 +133,6 @@ void Firework::calc(float dt) {
 					} else {
 						amount = rand() % 100 + 500; // Between 500 and 600 particles per rocket.
 					}
- 					
 
 					for(int a = 0; a < amount; a++ ) {
 						particle n;
@@ -145,7 +143,7 @@ void Firework::calc(float dt) {
 							n.velocity.z = 0.0f;
 						}
 
-						// Normalize the vector, so every distance from the particle from the rocket are the same.
+						// Normalize the vector, so every distance from the particle to the rocket are the same.
 						// Gives a sphere shape instead of a cube.
 						n.velocity = glm::normalize(n.velocity) * 3.0f; 		
 						n.velocity += 0.5f * i->velocity; // Take the velocity of the rocket into account.
@@ -215,7 +213,7 @@ glm::vec3 Firework::randomVelocity(float min, float max) {
 }
 
 // A class for setting up SDL (and the event handler), glew and the firework class.
-class Control {
+class Controller {
 	private:
 		int iWidth;
 		int iHeight;
@@ -235,7 +233,7 @@ class Control {
 		void setHeight(int h);
 };
 
-void Control::initialize() {
+void Controller::initialize() {
 	// SDL
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
 	SDL_SetVideoMode(iWidth, iHeight, 32, SDL_OPENGL | SDL_GL_DOUBLEBUFFER);
@@ -243,21 +241,10 @@ void Control::initialize() {
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
 	SDL_WM_SetCaption("Computer Graphics Final Project 2012", NULL);		
 
-	// SDL sound
-	int audio_rate = 22050;
-	Uint16 audio_format = AUDIO_S16SYS;
-	int audio_channels = 2;
-	int audio_buffers = 4096;
-
-	if(Mix_OpenAudio(audio_rate, audio_format, audio_channels, audio_buffers) != 0) {
-		fprintf(stderr, "Unable to initialize audio: %s\n", Mix_GetError());
-		exit(1);
-	}
-	
 	// GLEW
 	glewInit();
 
-	// GL
+	// OpenGL
 	glViewport(0, 0, iWidth, iHeight);
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f); 
 	glEnable(GL_DEPTH_TEST);
@@ -271,11 +258,11 @@ void Control::initialize() {
 	glEnable(GL_POINT_SMOOTH);
 }
 
-void Control::deinitialize() {
+void Controller::deinitialize() {
 	SDL_Quit();
 }
 
-void Control::prepare() {
+void Controller::prepare() {
 	running = true;
 
 	// Shaders
@@ -294,7 +281,7 @@ void Control::prepare() {
 	center = glm::vec3(0.0f, 2.0f, 0.0f);
 }
 
-void Control::run() {
+void Controller::run() {
 	float camRoty = 0.0f;
 	int lasttime = SDL_GetTicks();
 	int newtime;
@@ -361,8 +348,10 @@ void Control::run() {
 							} else {
 								follow = true;	
 							}
+							break;
 						case 'n':
 							fw.nosound = !fw.nosound;
+							break;
 					}	
 					break;
 				}
@@ -385,7 +374,7 @@ void Control::run() {
 		glAccum(GL_RETURN, 0.95f);
 		glClear(GL_ACCUM_BUFFER_BIT);
 
-		// Lines (axis)
+		// Lines (axes)
 
 		glUniform1f(iPointSizeLoc, 1.0f);
 
@@ -409,7 +398,7 @@ void Control::run() {
 		newtime = SDL_GetTicks();
 		fw.calc((newtime - lasttime) / 1000.0f);
 		if(follow) {
-			eye = fw.rocket * 2.5f;
+			eye = fw.rocket * 2.0f;
 			center = fw.rocket;
 		}
 		lasttime = newtime;
@@ -420,18 +409,18 @@ void Control::run() {
 	}
 }
 
-void Control::setWidth(int w) {
+void Controller::setWidth(int w) {
 	iWidth = w;
 }
 
-void Control::setHeight(int h) {
+void Controller::setHeight(int h) {
 	iHeight = h;
 }
 
 int main(int argc, char** argv)
 {
 	srand(time(NULL));
-	Control c;
+	Controller c;
 	c.setWidth(1280);
 	c.setHeight(720);
 	c.initialize();
